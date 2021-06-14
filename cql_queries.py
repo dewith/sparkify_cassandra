@@ -31,7 +31,7 @@ song_table_create = '''
         item_in_session int,
         user_first_name text,
         user_last_name text,
-        PRIMARY KEY ((song_title), user_id, session_id, item_in_session)
+        PRIMARY KEY (song_title, user_id)
     );
 '''
 
