@@ -19,6 +19,10 @@ In this project I use Apache Cassandra (with its Python driver) to create a NoSQ
   - [Methods used](#methods-used-)
   - [Tools](#tools-)
 - [Results](#results-)
+  - [Tables](#tables)
+    - [Sessions DB](#sessions-db)
+    - [Users DB](#users-db)
+    - [Song DB](#song-db)
   - [Next steps](#next-steps-)
 - [Installation](#installation-)
 - [File structure](#file-structure-)
@@ -30,39 +34,28 @@ In this project I use Apache Cassandra (with its Python driver) to create a NoSQ
 
 ## Motivation 🎯
 
-A startup called Sparkify wants to analyze the data they've been collecting on songs and user activity on their new music streaming app. The analytics team is particularly interested in understanding what songs users are listening to. Currently, they don't have an easy way to query their data, which resides in a directory of JSON logs on user activity on the app, as well as a directory with JSON metadata on the songs in their app. So they would like a data engineer to create a Postgres database with tables designed to optimize queries on song play analysis.
+A startup called Sparkify wants to analyze the data they've been collecting on songs and user activity on their new music streaming app. The analysis team is particularly interested in understanding what songs users are listening to. Currently, there is no easy way to query the data to generate the results, since the data reside in a directory of CSV files on user activity on the app. So they would like a data engineer to create an Apache Cassandra database which can create queries on song play data to answer the questions.
 
-> The **objective** is then to design an star schema for the database and write an ETL pipeline to transfer data from files into the tables in Postgres.
+> The **objective** is then to create a NoSQL database to answer the required queries and write an ETL pipeline to transfer data from files into the tables in Cassandra.
 
 ## Datasets 💾
 
-- **Song Dataset** — subset from [Million Song Dataset](http://millionsongdataset.com/)
+For this project, I worked with one dataset: `event_data`, which is he directory of CSV files partitioned by date. Here are examples of filepaths to two files in the dataset:
 
-    Each file is in JSON format and contains metadata about a song and the artist of that song. The files are partitioned by the first three letters of each song's track ID. For example, here are filepaths to two files in this dataset. <br>
-    ```
-    song_data/A/B/C/TRABCEI128F424C983.json
-    song_data/A/A/B/TRAABJL12903CDCF1A.json
-    ```
-- **Log Dataset** — generated with [Eventsim](https://github.com/Interana/eventsim)
-
-  The log files are in JSON format and were generated based on the songs in the dataset above. These simulate activity logs from a music streaming app based on specified configurations.
-  The log files in the dataset are partitioned by year and month. For example, here are filepaths to two files in this dataset.
-  ```
-  log_data/2018/11/2018-11-12-events.json
-  log_data/2018/11/2018-11-13-events.json
-  ```
+```text
+event_data/2018-11-08-events.csv
+event_data/2018-11-09-events.csv
+```
 
 ## Process ✍
 
 1. Creation of tables.
-    - Understanding the needs for the database
-    - Design of schema for the relational database
+    - Understanding the needs for the database based on queries.
+    - Choosing partition keys and clustering columns for each table.
     - Writing SQL queries for creation in a Python script.
 2. Building of ETL processes.
-    - Development of ETL process for each table in a notebook.
-    - Checking successful insertion of records.
-3. Building of ETL pipeline.
-    - Development of script to process the entire datasets.
+    - Development of script to process the event files.
+    - Create _insert_ statements to load processed records into relevant tables of data model
     - Checking the correct operation of the pipeline for inserting records.
 
 ### Methods used 📜
@@ -73,80 +66,132 @@ A startup called Sparkify wants to analyze the data they've been collecting on s
 ### Tools 🧰
 
 - Python
-- PostgreSQL
-- Psycopg2
+- Cassandra
 - Pandas
 
 ## Results 📣
 
-For the analytical purposes stated, a star schema was chosen because it is an ideally simple database design, with a single fact table which contains the aggregated data. And because data structure is denormalized, the queries and cube processing will be faster than in a snowflake schema.
+### Tables
 
-The database contains these tables:
+A data model was developed for every need stated, one table per query.
 
-| Type | Name | Description       | Columns |
-| :--------- | :----------- | :--------- | :----------- |
-| Fact | songplays | Users activity in the app  |  `songplay_id, start_time, user_id, level, song_id, artist_id, session_id, location, user_agent` |
-| Dimension | users | Users in the app | `user_id, first_name, last_name, gender, level` |
-| Dimension | songs | Songs in music database | `song_id, title, artist_id, year, duration` |
-| Dimension | artists | Artists in music database |`artist_id, name, location, latitude, longitude`|
-| Dimension | time | Timestamps into specific units |`start_time, hour, day, week, month, year, weekday`|
+#### Sessions DB
 
+For the first query wanted to ask the following to the data:
 
-This is an **example query** to find out which free users listen to music the most. This can be used by the marketing team to make special offers to convert them to the premium plan.
+> Give me the artist, song title and song's length in the music app history that was heard during sessionId = 338, and itemInSession = 4
+
+The table created contains these columns:
+
+| Name            | Data type | Column type   |
+|-----------------|-----------|---------------|
+| session_id      | bigint    | Partition key |
+| item_in_session | int       | Partition key |
+| artist_name     | text      | Column        |
+| song_title      | text      | Column        |
+| song_length     | float     | Column        |
+
+Sample queries:
+
 ```sql
-SELECT s.user_id,
-       Count(*) AS songplays_count
-FROM   songplays AS s
-       JOIN users AS u
-         ON s.user_id = u.user_id
-WHERE  u.level = 'free'
-GROUP  BY s.user_id
-ORDER  BY songplays_count DESC
-LIMIT  10;
+--Query 1
+SELECT artist_name, song_title, song_length 
+FROM session_library 
+WHERE session_id=338 AND item_in_session=4;
+
+--Query 2
+SELECT artist_name, song_title, song_length 
+FROM session_library 
+WHERE session_id=42;
 ```
 
-These are screenshots of the final tables:
+#### Users DB
 
-**songplays** <br>
-<img src="images\df_songplays.png" width=800>
+For the second query they wanted to ask the following to the data:
 
-**users** <br>
-<img src="images\df_users.png" width=250>
+> Give me only the following: name of artist, song (sorted by itemInSession) and user (first and last name) for userid = 10, sessionid = 182
 
-**songs** <br>
-<img src="images\df_songs.png" width=500>
+The table created contains these columns:
 
-**artists** <br>
-<img src="images\df_artists.png" width=500>
+| Name            | Data type | Column type       |
+|-----------------|-----------|-------------------|
+| user_id         | bigint    | Partition key     |
+| session_id      | bigint    | Partition key     |
+| item_in_session | int       | Clustering column |
+| artist_name     | text      | Column            |
+| song_title      | text      | Column            |
+| user_first_name | text      | Column            |
+| user_last_name  | text      | Column            |
 
-**time** <br>
-<img src="images\df_time.png" width=400>
+Sample queries:
 
-### Next steps 💡
+```sql
+--Query 1
+SELECT artist_name, song_title, user_first_name, user_last_name 
+FROM user_library 
+WHERE user_id = 10 AND session_id = 182
+ORDER BY item_in_session ASC;
 
-To improve the performance and quality of the pipeline, the following steps could be taken:
+--Query 2
+SELECT artist_name, song_title, user_first_name, user_last_name 
+FROM user_library 
+WHERE user_id = 80 AND session_id = 435
+ORDER BY item_in_session ASC;
+```
 
-1. Insert data using the COPY command to bulk insert log files instead of using INSERT on one row at a time
-2. Add data quality checks
-3. Create a dashboard for analytic queries on your new database
+#### Song DB
+
+And in the last query they wanted to ask the following to the data:
+
+> Give me every user name (first and last) in my music app history who listened to the song 'All Hands Against His Own'
+
+The table created contains these columns:
+
+| Name            | Data type | Column type       |
+|-----------------|-----------|-------------------|
+| song_title      | text      | Partition key     |
+| user_id         | bigint    | Clustering column |
+| session_id      | bigint    | Clustering column |
+| item_in_session | int       | Clustering column |
+| user_first_name | text      | Column            |
+| user_last_name  | text      | Column            |
+
+
+Sample queries:
+
+```sql
+--Query 1
+SELECT user_first_name, user_last_name 
+FROM song_library 
+WHERE song_title = 'All Hands Against His Own';
+
+--Query 2
+SELECT user_first_name, user_last_name 
+FROM song_library 
+WHERE song_title = 'Yellow'
+ORDER BY user_id, session_id ASC;
+```
 
 ## Installation 💻
 
-- The code was originally developed on the **Udacity's AWS Workspace** using in JupyterLab, mainly with the libraries [Psycopg2](https://www.psycopg.org/docs/) and [Pandas](https://pandas.pydata.org/). But it can be executed locally by meeting these requirements:
+- The code was originally developed on the **Udacity's AWS Workspace** using in JupyterLab, mainly with the libraries [Cassandra Driver](https://docs.datastax.com/en/developer/python-driver/3.24/). But it can be executed locally (assuming you already have Cassandra installed locally or in a sever) by meeting these requirements:
   - `python==3.6.3`
   - `conda==4.6.14`
   - `jupyterlab==1.0.9`
-  - `ipython-sql==0.3.9`
-  - `psycopg2==2.7.4`
+  - `cassandra-driver==3.11.0`
   - `pandas==0.23.3`
 
 ## File structure 📓
 
-- `create_tables.py` drops and creates the tables.
-- `etl.ipynb` reads and processes a single file from song_data and log_data and loads the data into the tables. This notebook was made to test the code before using in _etl.py_.
-- `etl.py` reads and processes files from _song_data_ and _log_data_ and loads them into the tables.
-- `sql_queries.py` contains all the sql queries, and is imported into the last three files above.
-- `test.ipynb` displays the first few rows of each table to check the database.
+- **`create_tables.py`** drops and creates the tables in the keyspace.
+
+- **`etl.py`** processes files from `event_data` directory and loads them into the tables.
+
+- **`cql_queries.py`** contains all the CQL queries, and it's used by `create_tables` and `etl.py`.
+
+- **`etl.ipynb`** reads and processes the files in `event_data` and loads the records into the tables. This notebook was made to test the code before creating `etl.py`.
+
+- **`test.ipynb`** have the queries to check each table in the database.
 
 ## Contact 📞
 
@@ -156,16 +201,3 @@ To improve the performance and quality of the pipeline, the following steps coul
 - or check out the rest of my projects on my [**GitHub**](https://github.com/dewith/) profile.
 
 [(Back to top)](#motivation-)
-
-
-```javascript I'm A tab
-console.log('Code Tab A');
-```
-```javascript I'm tab B
-console.log('Code Tab B');
-```
-
-
-> 👍 Success
-> 
-> Vitae reprehenderit at aliquid error voluptates eum dignissimos.
