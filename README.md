@@ -146,12 +146,11 @@ The table created contains these columns:
 | Name            | Data type | Column type       |
 |-----------------|-----------|-------------------|
 | song_title      | text      | Partition key     |
-| user_id         | bigint    | Clustering column |
+| user_id         | bigint    | Partition key     |
 | session_id      | bigint    | Clustering column |
 | item_in_session | int       | Clustering column |
 | user_first_name | text      | Column            |
 | user_last_name  | text      | Column            |
-
 
 Sample queries:
 
