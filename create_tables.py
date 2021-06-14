@@ -1,6 +1,7 @@
 from cassandra.cluster import Cluster
 from cql_queries import create_table_queries, drop_table_queries
 
+
 def create_keyspace():
     """Create and connect to the sparkifydb.
 
@@ -41,11 +42,11 @@ def drop_tables(session):
     """
     try:
         for query in drop_table_queries:
-            rows = session.execute(query)
+            session.execute(query)
     except Exception as e:
         print('Error while droping tables.')
         print(e)
-    
+
 
 def create_tables(session):
     """Create each table using the queries in `create_table_queries` list. 
@@ -67,7 +68,7 @@ def create_tables(session):
 def main():
     """Drop (if exists) and creates the music_library keyspace."""
     cluster, session = create_keyspace()
-    
+
     drop_tables(session)
     create_tables(session)
 
