@@ -146,9 +146,9 @@ The table created contains these columns:
 | Name            | Data type | Column type       |
 |-----------------|-----------|-------------------|
 | song_title      | text      | Partition key     |
-| user_id         | bigint    | Partition key     |
-| session_id      | bigint    | Clustering column |
-| item_in_session | int       | Clustering column |
+| user_id         | bigint    | Clustering column |
+| session_id      | bigint    | Column            |
+| item_in_session | int       | Column            |
 | user_first_name | text      | Column            |
 | user_last_name  | text      | Column            |
 
@@ -164,7 +164,7 @@ WHERE song_title = 'All Hands Against His Own';
 SELECT user_first_name, user_last_name 
 FROM song_library 
 WHERE song_title = 'Yellow'
-ORDER BY user_id, session_id ASC;
+ORDER BY user_id ASC;
 ```
 
 ## Installation 💻
