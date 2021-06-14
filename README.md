@@ -174,7 +174,7 @@ ORDER BY user_id, session_id ASC;
 
 ## Installation 💻
 
-- The code was originally developed on the **Udacity's AWS Workspace** using in JupyterLab, mainly with the libraries [Cassandra Driver](https://docs.datastax.com/en/developer/python-driver/3.24/). But it can be executed locally (assuming you already have Cassandra installed locally or in a sever) by meeting these requirements:
+- The code was originally developed on the **Udacity's AWS Workspace** using in JupyterLab, mainly with the [Cassandra Driver](https://docs.datastax.com/en/developer/python-driver/3.24/) library. But it can be executed locally (assuming you already have Cassandra installed locally or in a sever) by meeting these requirements:
   - `python==3.6.3`
   - `conda==4.6.14`
   - `jupyterlab==1.0.9`
